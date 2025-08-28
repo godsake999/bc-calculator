@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 import re
-import numpy_financial as npf
 import altair as alt
 import io
 from datetime import datetime
@@ -172,6 +171,37 @@ st.markdown("""
 # =================================
 CAPEX_NAMES = {"Dismantle", "License", "Unlicense", "Fiber", "Other Cost"}
 # ... (All helper functions remain the same)
+# ADD THIS NEW FUNCTION
+def calculate_irr(values, guess=0.1, tol=1e-12, max_iter=100):
+    """
+    Calculate the Internal Rate of Return (IRR) using the Newton-Raphson method.
+    This is a pure Python + NumPy replacement for numpy_financial.irr
+    """
+    values = np.atleast_1d(values)
+    if values.size == 0:
+        return np.nan
+
+    rate = guess
+    for _ in range(max_iter):
+        # Calculate NPV and its derivative (dNPV/dr)
+        t = np.arange(len(values))
+        npv = np.sum(values / ((1 + rate) ** t))
+        d_npv = np.sum(-t * values / ((1 + rate) ** (t + 1)))
+
+        # Avoid division by zero
+        if abs(d_npv) < 1e-12:
+            return np.nan # Or handle as an error/special case
+
+        # Newton-Raphson iteration
+        new_rate = rate - npv / d_npv
+        
+        # Check for convergence
+        if abs(new_rate - rate) < tol:
+            return new_rate
+        
+        rate = new_rate
+        
+    return np.nan # Failed to converge
 def fmt_currency(x: float, currency: str) -> str:
     try:
         if abs(x) >= 1_000_000: return f"{x/1_000_000:,.2f}M {currency}"
@@ -385,7 +415,7 @@ if st.session_state.calc_done:
         years = int(np.ceil(m / 12))
         DEBITDA_y = [float(np.sum(DEBITDA_m[y*12:min((y+1)*12, m)])) for y in range(years)]
         cf_y = [-capex_t] + DEBITDA_y
-        irr = npf.irr(cf_y)
+        irr = calculate_irr(cf_y) # Use our new custom function
         irr_pct = irr * 100 if irr is not None and not np.isnan(irr) else None
         series_df = pd.DataFrame({"Month": range(1, m + 1), "TR_monthly": TR_m, "OPEX_monthly": OPEX_m, "EBITDA_monthly": EBITDA_m, "DEBITDA_monthly": DEBITDA_m, "Cum_DEBITDA": cum_DEBITDA, "Net_Cum_Cash_Flow": cum_DEBITDA - capex_t})
         st.session_state.results = {'TR_total': TR_t, 'OPEX_total': OPEX_t, 'CAPEX_total': capex_t, 'EBITDA_total': EBITDA_t, 'EBITDA_pct': EBITDA_pct, 'NPV': NPV, 'IRR_annual_pct': irr_pct, 'discounted_payback': payback, 'breakdown': breakdown, 'series': series_df, 'context': {'currency': st.session_state.currency, 'name': st.session_state.scenario_name}}
