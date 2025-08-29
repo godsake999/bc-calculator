@@ -1,8 +1,6 @@
-streamlit==1.38.0
-pandas==2.2.2
-numpy==1.26.4
+streamlit
+pandas
+numpy
 openpyxl
-numpy-financial
-requests==2.31.0
-python-ipware==3.0.0
+requests
 plotly
