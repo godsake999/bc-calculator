@@ -424,7 +424,51 @@ def fmt_pct(x: float) -> str:
     try: return f"{x:,.2f}%"
     except (ValueError, TypeError): return "- %"
 
-import io
+def irr(cashflows, guess=0.1, tol=1e-6, max_iter=1000):
+    """
+    Calculate the Internal Rate of Return (IRR) for a series of cashflows.
+    
+    Parameters
+    ----------
+    cashflows : list or np.ndarray
+        Array of periodic cash flows. Negative values = outflows, positive = inflows.
+    guess : float, optional
+        Initial guess for IRR (default = 0.1 = 10%).
+    tol : float, optional
+        Tolerance level for convergence (default = 1e-6).
+    max_iter : int, optional
+        Maximum number of iterations (default = 1000).
+    
+    Returns
+    -------
+    irr : float
+        The IRR as a decimal (e.g., 0.15 = 15%). Returns None if not found.
+    """
+    cashflows = np.array(cashflows, dtype=float)
+
+    # Newton-Raphson method
+    rate = guess
+    for i in range(max_iter):
+        # NPV at current rate
+        denom = (1 + rate) ** np.arange(len(cashflows))
+        npv = np.sum(cashflows / denom)
+
+        # Derivative of NPV w.r.t rate
+        d_npv = np.sum(-np.arange(len(cashflows)) * cashflows / ((1 + rate) ** (np.arange(len(cashflows)) + 1)))
+
+        # Avoid division by zero
+        if d_npv == 0:
+            return None
+
+        new_rate = rate - npv / d_npv
+
+        # Check convergence
+        if abs(new_rate - rate) < tol:
+            return new_rate
+
+        rate = new_rate
+
+    return None  # If no convergence
 
 @st.cache_data(ttl=300, show_spinner="Loading data...")
 def load_data_from_upload(uploaded_file) -> Dict[str, pd.DataFrame]:
@@ -832,7 +876,7 @@ if st.session_state.calc_done:
         years = int(np.ceil(m / 12))
         DEBITDA_y = [float(np.sum(DEBITDA_m[y*12:min((y+1)*12, m)])) for y in range(years)]
         cf_y = [-capex_t] + DEBITDA_y
-        irr = npf.irr(cf_y)
+        irr = irr(cf_y)
         irr_pct = irr * 100 if irr is not None and not np.isnan(irr) else None
         
         series_df = pd.DataFrame({
