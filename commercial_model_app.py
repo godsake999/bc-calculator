@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 import re
-import numpy_financial as npf
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
