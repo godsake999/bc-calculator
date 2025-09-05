@@ -731,73 +731,75 @@ with left_col:
         </div>
     </div>
     """, unsafe_allow_html=True, help=False)
-    
-    with st.form("model_inputs"):
+
+    with st.form("model_inputs", clear_on_submit=False):
         # Revenue Section
         st.markdown("#### 💰 Revenue Configuration")
         col1, col2 = st.columns(2)
         with col1:
-            st.session_state.mrc = st.number_input(
+            mrc = st.number_input(
                 "Monthly Recurring Charge",
                 0.0,
-                value=st.session_state.mrc,
+                value=st.session_state.get("mrc", 1250.0),
                 step=50.0,
                 format="%.2f",
                 help="Monthly subscription fee"
             )
         with col2:
-            st.session_state.otc = st.number_input(
+            otc = st.number_input(
                 "One-Time Charge",
                 0.0,
-                value=st.session_state.otc,
+                value=st.session_state.get("otc", 0.0),
                 step=100.0,
                 format="%.2f",
                 help="Initial setup fee"
             )
-        
+
         st.markdown("---")
-        
+
         # Contract Details
         st.markdown("#### 📋 Contract & Technical Details")
         col1, col2 = st.columns(2)
         with col1:
-            st.session_state.months = st.number_input(
+            months = st.number_input(
                 "Contract Duration (Months)",
                 1, 120,
-                st.session_state.months,
-                1,
+                value=st.session_state.get("months", 12),
+                step=1,
                 help="Total contract length"
             )
-            st.session_state.bandwidth = st.number_input(
+            bandwidth = st.number_input(
                 "Bandwidth (Mbps)",
                 0.0,
-                value=st.session_state.bandwidth,
+                value=st.session_state.get("bandwidth", 500.0),
                 step=10.0,
                 help="Service bandwidth requirement"
             )
         with col2:
-            st.session_state.discount_rate = st.number_input(
+            discount_rate = st.number_input(
                 "Annual Discount Rate (%)",
                 0.0, 100.0,
-                st.session_state.discount_rate * 100,
-                1.0,
+                value=st.session_state.get("discount_rate", 0.25) * 100,
+                step=1.0,
                 help="For NPV calculations"
             ) / 100.0
-            st.session_state.fiber_distance = st.number_input(
+            fiber_distance = st.number_input(
                 "Fiber Distance (km)",
                 0.0,
-                value=st.session_state.fiber_distance,
+                value=st.session_state.get("fiber_distance", 0.0),
                 step=0.5,
                 help="Total fiber cable distance"
             )
-        
+
         # Advanced Options
         with st.expander("🔧 Advanced Cost Overrides"):
             cost_table = data[f"CostTable_{st.session_state.currency}"]
             related_items = data["ProductCostRelation"][
                 data["ProductCostRelation"]["ProductID"] == st.session_state.product_id
             ]
-            
+
+            manual_variable_choices = st.session_state.get("manual_variable_choices", {})
+
             if not related_items.empty:
                 for _, relrow in related_items.iterrows():
                     cid = relrow["CostItemID"]
@@ -805,32 +807,39 @@ with left_col:
                     distinct_vars = ["NA"] + sorted([
                         v for v in rows["Variable"].dropna().astype(str).str.strip().unique() if v
                     ])
-                    
+
                     if len(distinct_vars) > 1:
                         item_name = data["CostItems"].loc[
                             data["CostItems"]["CostItemID"] == cid, "ItemName"
                         ].iloc[0]
-                        
-                        current_choice = st.session_state.manual_variable_choices.get(cid)
-                        default_index = 0
-                        if current_choice and current_choice in distinct_vars:
-                            default_index = distinct_vars.index(current_choice)
-                        
+
+                        current_choice = manual_variable_choices.get(cid)
+                        default_index = distinct_vars.index(current_choice) if current_choice in distinct_vars else 0
+
                         choice = st.selectbox(
                             f"{item_name}",
                             options=distinct_vars,
                             index=default_index,
                             key=f"var_{cid}"
                         )
-                        st.session_state.manual_variable_choices[cid] = choice
-        
-        # Submit Button
-        submitted = st.form_submit_button(
-            "🚀 Calculate NPV & Analysis",
-            use_container_width=True
-        )
-        if submitted:
-            st.session_state.calc_done = True
+                        manual_variable_choices[cid] = choice
+
+        # 🚀 Submit Button (Triggers calculation ONLY when pressed)
+        submitted = st.form_submit_button("🚀 Calculate NPV & Analysis", use_container_width=True)
+
+    # Outside form: Run only when button is pressed
+    if submitted:
+        # Save latest inputs into session_state
+        st.session_state.mrc = mrc
+        st.session_state.otc = otc
+        st.session_state.months = months
+        st.session_state.bandwidth = bandwidth
+        st.session_state.discount_rate = discount_rate
+        st.session_state.fiber_distance = fiber_distance
+        st.session_state.manual_variable_choices = manual_variable_choices
+
+        # Run calculations here
+        st.session_state.calc_done = True
 
 # Perform Calculations
 if st.session_state.calc_done:
