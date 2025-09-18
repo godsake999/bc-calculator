@@ -27,9 +27,9 @@ st.markdown("""
     
     /* CSS Variables for consistent theming */
     :root {
-        --primary-color: #6366F1;
-        --primary-dark: #4F46E5;
-        --secondary-color: #8B5CF6;
+        --primary-color: #D4AF37;     /* Gold */
+        --primary-dark: #B8860B;      /* Darker Gold */
+        --secondary-color: #FFD700;   /* Bright Gold Accent */
         --success-color: #10B981;
         --warning-color: #F59E0B;
         --danger-color: #EF4444;
@@ -143,30 +143,31 @@ st.markdown("""
     .stTextInput > div > div > input,
     .stNumberInput > div > div > input,
     .stSelectbox > div > div > select {
-        background: var(--light-bg);
+        background: var(--card-bg);
         border: 2px solid var(--border-color);
         border-radius: 12px;
         padding: 0.75rem 1rem;
         font-size: 1rem;
-        transition: all 0.2s;
         font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    
+
     .stTextInput > div > div > input:focus,
     .stNumberInput > div > div > input:focus,
     .stSelectbox > div > div > select:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
         outline: none;
     }
-    
-    /* Label Styling */
+
+    /* Stronger Labels */
     .stTextInput > label,
     .stNumberInput > label,
     .stSelectbox > label {
         color: var(--text-primary);
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         margin-bottom: 0.5rem;
     }
     
@@ -208,12 +209,43 @@ st.markdown("""
         height: 300px;
     }
     
-    /* Form Submit Button */
+    /* Form Submit Button - Themed to Match Gold Primary */
     .stForm [data-testid="stFormSubmitButton"] > button {
-        background: linear-gradient(135deg, var(--success-color), #059669);
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+        color: white !important;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--shadow-md);
         width: 100%;
-        padding: 1rem;
-        font-size: 1.1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stForm [data-testid="stFormSubmitButton"] > button::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    .stForm [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .stForm [data-testid="stFormSubmitButton"] > button:hover::before {
+        width: 300px;
+        height: 300px;
     }
     
     /* Enhanced Metrics */
@@ -567,7 +599,8 @@ def compute_costs_for_product(product_id: str, currency_table: pd.DataFrame, rel
         else: 
             row = pick_variable_row(rows, inputs)
         amount = float(row["CostAmount"])
-        if cid == "I03": amount *= inputs.get("Bandwidth", 1.0)
+        if cid in ("I03", "I07"):
+            amount *= inputs.get("Bandwidth", 1.0)
         breakdown.append({
             "CostItemID": cid, "ItemName": item_name, 
             "VariableUsed": str(row.get("Variable", "")).strip() or "Auto", 
@@ -690,37 +723,6 @@ left_col, right_col = st.columns([5, 7])
 
 # Left Column - Inputs
 with left_col:
-    # Product Selection Card
-    st.markdown("""
-    <div class="modern-card">
-        <div class="modern-card-header">
-            <div class="modern-card-header-icon">🎯</div>
-            Step 1: Product Configuration
-        </div>
-    </div>
-    """, unsafe_allow_html=True, help=False)
-    
-    with st.container():
-        col1, col2 = st.columns([2, 1])
-        
-        product_df = data["Product"]
-        if st.session_state.product_id is None and not product_df.empty:
-            st.session_state.product_id = product_df["ProductID"].iloc[0]
-        
-        with col1:
-            st.session_state.product_id = st.selectbox(
-                "📦 Product Type",
-                options=product_df["ProductID"],
-                format_func=lambda pid: f"{pid} — {product_df.loc[product_df['ProductID']==pid, 'ProductName'].values[0]}",
-                index=list(product_df["ProductID"]).index(st.session_state.product_id)
-            )
-        
-        with col2:
-            st.session_state.currency = st.selectbox(
-                "💱 Currency",
-                ["USD", "MMK"],
-                index=["USD", "MMK"].index(st.session_state.currency)
-            )
     
     # Scenario Details Card
     st.markdown("""
@@ -729,8 +731,33 @@ with left_col:
             <div class="modern-card-header-icon">⚙️</div>
             Step 2: Commercial Parameters
         </div>
-    </div>
-    """, unsafe_allow_html=True, help=False)
+        <div style="background: rgba(212, 175, 55, 0.03); padding: 1.5rem; border-radius: 0 0 16px 16px; margin: -1.5rem -1.5rem 0 -1.5rem;">
+    """, unsafe_allow_html=True)
+
+    st.markdown("#### 📝 Scenario Details")
+    col1, col2 = st.columns(2)
+    product_df = data["Product"]
+    if st.session_state.product_id is None and not product_df.empty:
+        st.session_state.product_id = product_df["ProductID"].iloc[0]
+    
+    with col1:
+        st.session_state.product_id = st.selectbox(
+            "📦 Product Type",
+            options=product_df["ProductID"],
+            format_func=lambda pid: f"{pid} — {product_df.loc[product_df['ProductID']==pid, 'ProductName'].values[0]}",
+            index=list(product_df["ProductID"]).index(st.session_state.product_id),
+            key="product_selector"  # optional explicit key
+        )
+    
+    with col2:
+        st.session_state.currency = st.selectbox(
+            "💱 Currency",
+            ["USD", "MMK"],
+            index=["USD", "MMK"].index(st.session_state.currency),
+            key="currency_selector"
+        )
+
+    st.markdown("---")
 
     with st.form("model_inputs", clear_on_submit=False):
         # Revenue Section
@@ -826,6 +853,7 @@ with left_col:
 
         # 🚀 Submit Button (Triggers calculation ONLY when pressed)
         submitted = st.form_submit_button("🚀 Calculate NPV & Analysis", use_container_width=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     # Outside form: Run only when button is pressed
     if submitted:
@@ -867,7 +895,9 @@ if st.session_state.calc_done:
         TR_m = [mrc] * m
         TR_m[0] += otc
         reg_fee_m = [tr * 0.04 for tr in TR_m]
-        otc_cost = next((i["Amount"] for i in breakdown if i["CostItemID"] == "I02"), 0.0)
+        # Handle one-time OPEX items (e.g., I02, I08) — apply only in Month 1
+        one_time_ids = {"I02", "I08"}
+        otc_cost = sum(i["Amount"] for i in breakdown if i["CostItemID"] in one_time_ids)
         reg_opex_m = opex_m - otc_cost
         OPEX_m = [reg_opex_m] * m
         OPEX_m[0] += otc_cost
@@ -927,36 +957,40 @@ with right_col:
         # KPI Dashboard
         st.markdown("#### Key Performance Indicators")
         
-        # First Row of KPIs
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("💰 Total Revenue", fmt_currency(res['TR_total'], currency))
-        with col2:
-            st.metric("📉 Total OPEX", fmt_currency(res['OPEX_total'], currency))
-        with col3:
-            st.metric("🏗️ Total CAPEX", fmt_currency(res['CAPEX_total'], currency))
-        
-        # Second Row of KPIs
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("📈 EBITDA", fmt_currency(res['EBITDA_total'], currency))
-        with col2:
-            st.metric("💹 EBITDA Margin", fmt_pct(res['EBITDA_pct']))
-        with col3:
-            st.metric("💵 Net Cash Flow", fmt_currency(res['EBITDA_total'] - res['CAPEX_total'], currency))
-        
-        # Third Row - Financial Metrics
-        col1, col2 = st.columns(2)
-        with col1:
-            npv_delta = "positive" if res['NPV'] > 0 else "negative"
-            st.metric(
-                "🎯 Net Present Value",
-                fmt_currency(res['NPV'], currency),
-                delta=npv_delta
-            )
-        with col2:
-            irr_value = fmt_pct(res['IRR_annual_pct']) if res['IRR_annual_pct'] else "N/A"
-            st.metric("📊 Annual IRR", irr_value)
+        # Define all KPIs as list of tuples for easy iteration
+        kpis = [
+            ("💰 Total Revenue", fmt_currency(res['TR_total'], currency), None),
+            ("📉 Total OPEX", fmt_currency(res['OPEX_total'], currency), None),
+            ("🏗️ Total CAPEX", fmt_currency(res['CAPEX_total'], currency), None),
+            ("📈 EBITDA", fmt_currency(res['EBITDA_total'], currency), None),
+            ("💹 EBITDA Margin", fmt_pct(res['EBITDA_pct']), None),
+            ("💵 Net Cash Flow", fmt_currency(res['EBITDA_total'] - res['CAPEX_total'], currency), None),
+            ("🎯 Net Present Value", fmt_currency(res['NPV'], currency), res['NPV']),
+            ("📊 Annual IRR", fmt_pct(res['IRR_annual_pct']) if res['IRR_annual_pct'] else "N/A", None),
+        ]
+
+        # Display 4 rows × 2 columns
+        for i in range(0, len(kpis), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                idx = i + j
+                if idx >= len(kpis):
+                    break  # In case odd number (not needed here, but safe)
+                
+                label, value, delta = kpis[idx]
+                
+                with cols[j]:
+                    st.markdown(f"""
+                    <div class="modern-card" style="text-align: center; padding: 1rem;">
+                        <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            {label}
+                        </div>
+                        <div style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+                            {value}
+                        </div>
+                        {"<div style='font-size: 0.875rem; color: " + ("var(--success-color)" if delta and delta > 0 else "var(--danger-color)" if delta and delta < 0 else "var(--text-secondary)") + "; margin-top: 0.25rem;'>" + ("▲" if delta and delta > 0 else "▼" if delta and delta < 0 else "") + "</div>" if delta is not None else ""}
+                    </div>
+                    """, unsafe_allow_html=True)
         
         # Payback Period Banner
         if res['discounted_payback']:
@@ -1002,8 +1036,10 @@ if st.session_state.calc_done and st.session_state.results:
         
         with col2:
             st.markdown("#### Monthly Cash Flow")
+            max_months = len(res['series'])
+            display_months = st.slider("Months to display", 1, max_months, min(12, max_months))
             st.dataframe(
-                res['series'][['Month', 'TR_monthly', 'OPEX_monthly', 'EBITDA_monthly']].head(12),
+                res['series'][['Month', 'TR_monthly', 'OPEX_monthly', 'EBITDA_monthly']].head(display_months),
                 use_container_width=True,
                 hide_index=True
             )
